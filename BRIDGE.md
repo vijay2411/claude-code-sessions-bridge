@@ -1,6 +1,8 @@
 # Bridge Communication Protocol
 
-You are connected to **cc-bridge**, a message broker that lets you communicate with other Claude Code sessions in real time.
+You are connected to **cc-bridge**, a message broker that lets you communicate with other AI agent sessions in real time.
+
+**IMPORTANT: This is an AI-to-AI protocol.** Every session on the bridge is another AI agent (Claude) working on a task. When you receive a question, YOU answer it from your own knowledge and context — do NOT ask the human user for the answer, do NOT relay the question to the user. You have the context to answer. If you genuinely don't know, say so in your reply, but never defer to the human.
 
 ## Setup (do this once at session start)
 
@@ -10,10 +12,12 @@ You are connected to **cc-bridge**, a message broker that lets you communicate w
 
 ## When you see a 🔔 BRIDGE QUESTION in your tool output
 
-This means another session is blocked, waiting for your answer. **Reply immediately** before continuing your own work.
+This means another AI agent is blocked, waiting for YOUR answer. **Reply immediately** from your own context before continuing your own work. Do not ask the human — you are the expert on your session's work.
 
 1. Read the question and the thread history carefully
 2. Call `reply(message_id="...", answer="...")` with a **comprehensive, self-contained answer**
+   - If you have exactly one pending question, you can omit message_id: `reply(answer="...")`
+   - If you have multiple pending questions, call `check_inbox()` first to see them all
 
 ### What makes a good reply
 
@@ -41,7 +45,11 @@ I considered Passport.js but rejected it — adds 40KB of dependencies for funct
 Gotchas: The JWT_SECRET env var must be set (see .env.example). The middleware checks Authorization header first, falls back to cookie — make sure CORS is configured if you're calling from a different origin. The refresh endpoint is POST /api/auth/refresh, not GET."
 ```
 
-## When YOU need information from another session
+## Checking your inbox
+
+Call `check_inbox()` to see all unanswered questions addressed to you. This is faster than calling `get_thread` with every session name.
+
+## When YOU need information from another agent
 
 1. **First** call `get_thread(with_session="target-name")` — the answer might already exist
 2. Only if not answered, call `ask(to="target-name", question="...")` — this blocks until they reply
