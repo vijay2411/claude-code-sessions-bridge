@@ -15,7 +15,7 @@ cd claude-code-sessions-bridge
 Then start the bridge:
 
 ```bash
-node bridge-server.mjs
+nohup node bridge-server.mjs&
 ```
 
 Open 2+ Claude Code sessions. They auto-register on your first message. Start asking questions between them.
