@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SETTINGS="$HOME/.claude/settings.json"
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+DESKTOP_CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 PORT="${CC_BRIDGE_PORT:-7400}"
 
 RED='\033[0;31m'
@@ -231,6 +232,90 @@ check_claude_md() {
   fi
 }
 
+# ── Claude Desktop app ──────────────────────────────────────────────────────
+
+install_desktop() {
+  # Only on macOS
+  if [ "$(uname)" != "Darwin" ]; then
+    warn "Claude Desktop app config skipped (not macOS)"
+    return
+  fi
+
+  local config_dir
+  config_dir="$(dirname "$DESKTOP_CONFIG")"
+
+  if [ ! -d "$config_dir" ]; then
+    warn "Claude Desktop app not found (no config directory)"
+    return
+  fi
+
+  if [ ! -f "$DESKTOP_CONFIG" ]; then
+    echo '{}' > "$DESKTOP_CONFIG"
+  fi
+
+  # Check if cc-bridge is already configured
+  if jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
+    # Update the path in case repo moved
+    local tmp
+    tmp=$(mktemp)
+    jq --arg path "$REPO_DIR/bridge-stdio.mjs" '
+      .mcpServers["cc-bridge"].args = [$path]
+    ' "$DESKTOP_CONFIG" > "$tmp" && mv "$tmp" "$DESKTOP_CONFIG"
+    ok "Desktop app config updated (path refreshed)"
+  else
+    local tmp
+    tmp=$(mktemp)
+    jq --arg path "$REPO_DIR/bridge-stdio.mjs" '
+      .mcpServers //= {} |
+      .mcpServers["cc-bridge"] = {
+        "command": "node",
+        "args": [$path]
+      }
+    ' "$DESKTOP_CONFIG" > "$tmp" && mv "$tmp" "$DESKTOP_CONFIG"
+    ok "Desktop app config added (relaunch the app to activate)"
+  fi
+}
+
+remove_desktop() {
+  if [ ! -f "$DESKTOP_CONFIG" ]; then
+    warn "No Desktop app config found"
+    return
+  fi
+
+  if jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
+    local tmp
+    tmp=$(mktemp)
+    jq 'del(.mcpServers["cc-bridge"]) | if .mcpServers == {} then del(.mcpServers) else . end' "$DESKTOP_CONFIG" > "$tmp" && mv "$tmp" "$DESKTOP_CONFIG"
+    ok "Desktop app config removed (relaunch the app)"
+  else
+    warn "cc-bridge not in Desktop app config"
+  fi
+}
+
+check_desktop() {
+  if [ "$(uname)" != "Darwin" ]; then
+    warn "Claude Desktop app check skipped (not macOS)"
+    return
+  fi
+
+  if [ ! -f "$DESKTOP_CONFIG" ]; then
+    warn "No Desktop app config found"
+    return
+  fi
+
+  if jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
+    local configured_path
+    configured_path=$(jq -r '.mcpServers["cc-bridge"].args[0]' "$DESKTOP_CONFIG")
+    if [ -f "$configured_path" ]; then
+      ok "Desktop app configured (stdio adapter: $configured_path)"
+    else
+      fail "Desktop app configured but stdio adapter not found at: $configured_path"
+    fi
+  else
+    warn "Desktop app not configured (optional — run install to add)"
+  fi
+}
+
 # ── Bridge server status ───────────────────────────────────────────────────
 
 check_bridge() {
@@ -260,15 +345,21 @@ case "$ACTION" in
     echo ""
     echo "Installing..."
     chmod +x "$REPO_DIR"/hooks/*.sh
+    echo ""
+    echo "Claude Code CLI:"
     install_hooks
     install_mcp
     install_claude_md
+    echo ""
+    echo "Claude Desktop App:"
+    install_desktop
     echo ""
     echo "Done! Start the bridge:"
     echo ""
     echo "  node $REPO_DIR/bridge-server.mjs"
     echo ""
-    echo "Then open 2+ Claude Code sessions. They auto-register."
+    echo "CLI sessions auto-register. Desktop app needs a relaunch,"
+    echo "then tell it: \"Register on the bridge as 'desktop'\""
     echo ""
     ;;
 
@@ -280,10 +371,12 @@ case "$ACTION" in
     remove_hooks
     remove_mcp
     remove_claude_md
+    remove_desktop
     rm -f /tmp/cc-bridge-*
     ok "Temp files cleaned"
     echo ""
     echo "Done. Stop any running bridge server manually (kill the process)."
+    echo "Relaunch Claude Desktop app if it was configured."
     echo ""
     ;;
 
@@ -295,10 +388,13 @@ case "$ACTION" in
     echo "Prerequisites:"
     check_prereqs || true
     echo ""
-    echo "Configuration:"
+    echo "Claude Code CLI:"
     check_hooks || true
     check_mcp || true
     check_claude_md || true
+    echo ""
+    echo "Claude Desktop App:"
+    check_desktop
     echo ""
     echo "Server:"
     check_bridge
