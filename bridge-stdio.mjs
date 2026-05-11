@@ -115,7 +115,7 @@ async function handleRequest(rpc) {
       id: rpc.id,
       result: {
         protocolVersion: "2024-11-05",
-        serverInfo: { name: "cc-bridge", version: "2.1.0" },
+        serverInfo: { name: "claude-bridge", version: "2.3.0" },
         capabilities: { tools: {} },
       },
     });

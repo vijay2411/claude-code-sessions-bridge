@@ -3,9 +3,10 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SETTINGS="$HOME/.claude/settings.json"
-SKILL_DIR="$HOME/.claude/skills/cc-bridge"
+SKILL_DIR="$HOME/.claude/skills/claude-bridge"
+LEGACY_SKILL_DIR="$HOME/.claude/skills/cc-bridge"
 DESKTOP_CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-PID_FILE="/tmp/cc-bridge.pid"
+PID_FILE="/tmp/claude-bridge.pid"
 PORT="${CC_BRIDGE_PORT:-7400}"
 VERSION_FILE="$HOME/.claude/.cc-bridge-version"
 MANIFEST_FILE="$HOME/.claude/.cc-bridge-manifest"
@@ -34,8 +35,8 @@ case "${1:-}" in
   --help|-h)
     echo "Usage: ./install.sh [--uninstall | --check | --start | --stop | --restart | --help]"
     echo ""
-    echo "  (no args)    Install cc-bridge hooks, MCP server, skill, and Desktop config"
-    echo "  --uninstall  Remove all cc-bridge configuration"
+    echo "  (no args)    Install claude-bridge hooks, MCP server, skill, and Desktop config"
+    echo "  --uninstall  Remove all claude-bridge configuration"
     echo "  --check      Verify installation without changing anything"
     echo "  --start      Start the bridge server (writes PID to $PID_FILE)"
     echo "  --stop       Stop the bridge server (graceful SIGTERM)"
@@ -54,7 +55,7 @@ esac
 manifest_init() {
   mkdir -p "$(dirname "$MANIFEST_FILE")"
   {
-    echo "# cc-bridge install manifest — generated $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "# claude-bridge install manifest — generated $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "# version: $VERSION"
     echo "# repo: $REPO_DIR"
   } > "$MANIFEST_FILE"
@@ -258,6 +259,12 @@ check_mcp() {
 # ── Skill (replaces old CLAUDE.md append) ──────────────────────────────────
 
 install_skill() {
+  # Migrate legacy cc-bridge skill directory if present
+  if [ -d "$LEGACY_SKILL_DIR" ] && [ "$LEGACY_SKILL_DIR" != "$SKILL_DIR" ]; then
+    rm -rf "$LEGACY_SKILL_DIR"
+    ok "Removed legacy skill at $LEGACY_SKILL_DIR"
+  fi
+
   mkdir -p "$SKILL_DIR"
   cp "$REPO_DIR/skill/SKILL.md" "$SKILL_DIR/SKILL.md"
   manifest_add DIR "$SKILL_DIR"
@@ -265,12 +272,18 @@ install_skill() {
 }
 
 remove_skill() {
+  local removed=0
   if [ -d "$SKILL_DIR" ]; then
     rm -rf "$SKILL_DIR"
-    ok "Bridge protocol skill removed"
-  else
-    warn "No bridge skill found"
+    ok "Bridge protocol skill removed ($SKILL_DIR)"
+    removed=1
   fi
+  if [ -d "$LEGACY_SKILL_DIR" ] && [ "$LEGACY_SKILL_DIR" != "$SKILL_DIR" ]; then
+    rm -rf "$LEGACY_SKILL_DIR"
+    ok "Legacy skill removed ($LEGACY_SKILL_DIR)"
+    removed=1
+  fi
+  [ "$removed" -eq 0 ] && warn "No bridge skill found"
 }
 
 check_skill() {
@@ -322,11 +335,19 @@ install_desktop() {
     echo '{}' > "$DESKTOP_CONFIG"
   fi
 
+  # Migrate legacy "cc-bridge" key to "claude-bridge" if present
   if jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
     local tmp
     tmp=$(mktemp)
+    jq 'del(.mcpServers["cc-bridge"])' "$DESKTOP_CONFIG" > "$tmp" && mv "$tmp" "$DESKTOP_CONFIG"
+    ok "Migrated legacy 'cc-bridge' Desktop config key"
+  fi
+
+  if jq -e '.mcpServers["claude-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
+    local tmp
+    tmp=$(mktemp)
     jq --arg path "$REPO_DIR/bridge-stdio.mjs" '
-      .mcpServers["cc-bridge"].args = [$path]
+      .mcpServers["claude-bridge"].args = [$path]
     ' "$DESKTOP_CONFIG" > "$tmp" && mv "$tmp" "$DESKTOP_CONFIG"
     ok "Desktop app config updated (path refreshed)"
   else
@@ -334,7 +355,7 @@ install_desktop() {
     tmp=$(mktemp)
     jq --arg path "$REPO_DIR/bridge-stdio.mjs" '
       .mcpServers //= {} |
-      .mcpServers["cc-bridge"] = {
+      .mcpServers["claude-bridge"] = {
         "command": "node",
         "args": [$path]
       }
@@ -349,14 +370,22 @@ remove_desktop() {
     return
   fi
 
+  local removed=0
+  if jq -e '.mcpServers["claude-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
+    local tmp
+    tmp=$(mktemp)
+    jq 'del(.mcpServers["claude-bridge"]) | if .mcpServers == {} then del(.mcpServers) else . end' "$DESKTOP_CONFIG" > "$tmp" && mv "$tmp" "$DESKTOP_CONFIG"
+    ok "Desktop app config removed (claude-bridge — relaunch the app)"
+    removed=1
+  fi
   if jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
     local tmp
     tmp=$(mktemp)
     jq 'del(.mcpServers["cc-bridge"]) | if .mcpServers == {} then del(.mcpServers) else . end' "$DESKTOP_CONFIG" > "$tmp" && mv "$tmp" "$DESKTOP_CONFIG"
-    ok "Desktop app config removed (relaunch the app)"
-  else
-    warn "cc-bridge not in Desktop app config"
+    ok "Legacy Desktop config key removed (cc-bridge)"
+    removed=1
   fi
+  [ "$removed" -eq 0 ] && warn "claude-bridge not in Desktop app config"
 }
 
 check_desktop() {
@@ -370,14 +399,16 @@ check_desktop() {
     return
   fi
 
-  if jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
+  if jq -e '.mcpServers["claude-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
     local configured_path
-    configured_path=$(jq -r '.mcpServers["cc-bridge"].args[0]' "$DESKTOP_CONFIG")
+    configured_path=$(jq -r '.mcpServers["claude-bridge"].args[0]' "$DESKTOP_CONFIG")
     if [ -f "$configured_path" ]; then
       ok "Desktop app configured (stdio adapter: $configured_path)"
     else
       fail "Desktop app configured but stdio adapter not found at: $configured_path"
     fi
+  elif jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
+    warn "Legacy 'cc-bridge' Desktop config key present — re-run install to migrate to 'claude-bridge'"
   else
     warn "Desktop app not configured (optional — run install to add)"
   fi
@@ -397,15 +428,15 @@ start_bridge() {
     fi
   fi
 
-  nohup node "$REPO_DIR/bridge-server.mjs" >> /tmp/cc-bridge-server.log 2>&1 &
+  nohup node "$REPO_DIR/bridge-server.mjs" >> /tmp/claude-bridge-server.log 2>&1 &
   sleep 1
 
   if [ -f "$PID_FILE" ]; then
     local pid
     pid=$(cat "$PID_FILE")
-    ok "Bridge started (PID $pid, port $PORT, log: /tmp/cc-bridge-server.log)"
+    ok "Bridge started (PID $pid, port $PORT, log: /tmp/claude-bridge-server.log)"
   else
-    fail "Bridge failed to start — check /tmp/cc-bridge-server.log"
+    fail "Bridge failed to start — check /tmp/claude-bridge-server.log"
   fi
 }
 
@@ -454,7 +485,7 @@ check_bridge() {
 case "$ACTION" in
   install)
     echo ""
-    echo "cc-bridge installer (v$VERSION)"
+    echo "claude-bridge installer (v$VERSION)"
     echo "==================="
     echo ""
     echo "Checking prerequisites..."
@@ -491,7 +522,7 @@ case "$ACTION" in
 
   uninstall)
     echo ""
-    echo "cc-bridge uninstaller (running v$VERSION)"
+    echo "claude-bridge uninstaller (running v$VERSION)"
     echo "====================="
     echo ""
 
@@ -518,8 +549,8 @@ case "$ACTION" in
     remove_skill
     remove_claude_md_legacy
     remove_desktop
-    rm -f /tmp/cc-bridge-*
-    ok "Temp files cleaned (/tmp/cc-bridge-*)"
+    rm -f /tmp/claude-bridge-* /tmp/cc-bridge-* /tmp/claude-bridge.pid /tmp/cc-bridge.pid
+    ok "Temp files cleaned (/tmp/{claude,cc}-bridge-*)"
     rm -f "$VERSION_FILE"
     echo ""
     echo "Done. Stop any running bridge server: ./install.sh --stop"
@@ -529,7 +560,7 @@ case "$ACTION" in
 
   check)
     echo ""
-    echo "cc-bridge status (repo v$VERSION)"
+    echo "claude-bridge status (repo v$VERSION)"
     echo "================"
     echo ""
     if [ -f "$VERSION_FILE" ]; then

@@ -1,4 +1,4 @@
-# cc-bridge
+# claude-bridge
 
 **Real-time Q&A between Claude sessions -- CLI agents, Desktop app, and Cowork -- no copy-paste, no context switching, no human message routing.**
 
@@ -111,7 +111,7 @@ I wanted my agents to talk to each other without me in the loop. So I built it.
 ### Big picture
 
 ```
-Claude Code CLI (A)            cc-bridge (:7400)           Claude Code CLI (B)
+Claude Code CLI (A)            claude-bridge (:7400)       Claude Code CLI (B)
 ───────────────────            ─────────────────           ───────────────────
 SessionStart hook ──────────→        MCP          ←──────── SessionStart hook
   auto-registers              over SSE (:7400/sse)           auto-registers
@@ -129,7 +129,7 @@ Claude Desktop App ────────────│  stdio adapter   │�
 
 ### In one paragraph
 
-cc-bridge runs a single Node.js HTTP server speaking MCP over SSE. Claude Code CLI sessions connect directly via SSE and get automatic registration/question delivery through 5 lifecycle hooks. The Claude Desktop app connects through a stdio adapter (`bridge-stdio.mjs`) that proxies MCP tool calls to the same bridge server. Desktop sessions have the same tools but no hooks -- they register manually and check their inbox on request. All sessions share the same bridge state: messages, threads, and scratchpads.
+claude-bridge runs a single Node.js HTTP server speaking MCP over SSE. Claude Code CLI sessions connect directly via SSE and get automatic registration/question delivery through 5 lifecycle hooks. The Claude Desktop app connects through a stdio adapter (`bridge-stdio.mjs`) that proxies MCP tool calls to the same bridge server. Desktop sessions have the same tools but no hooks -- they register manually and check their inbox on request. All sessions share the same bridge state: messages, threads, and scratchpads.
 
 ### Why this architecture works
 

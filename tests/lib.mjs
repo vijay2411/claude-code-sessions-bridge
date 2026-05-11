@@ -1,4 +1,4 @@
-// Shared helpers for cc-bridge tests.
+// Shared helpers for claude-bridge tests.
 //
 // Spin up a temp bridge server on a non-default port, connect via SSE,
 // dispatch tool calls, and read responses. Keep this file dependency-free

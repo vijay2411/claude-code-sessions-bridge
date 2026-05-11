@@ -46,24 +46,24 @@ That's it. The install configures hooks, registers the MCP server, installs the 
 2. Makes hook scripts executable
 3. Adds 5 hooks to `~/.claude/settings.json` -- merges with your existing hooks, doesn't overwrite
 4. Registers the MCP server: `claude mcp add --transport sse --scope user bridge`
-5. Installs the bridge protocol skill to `~/.claude/skills/cc-bridge/SKILL.md`
+5. Installs the bridge protocol skill to `~/.claude/skills/claude-bridge/SKILL.md`
 6. Removes legacy CLAUDE.md bridge docs if present (from older versions)
 
 **Claude Desktop App (macOS only):**
-7. Adds `cc-bridge` MCP server to `~/Library/Application Support/Claude/claude_desktop_config.json` pointing to the stdio adapter (`bridge-stdio.mjs`)
+7. Adds `claude-bridge` MCP server to `~/Library/Application Support/Claude/claude_desktop_config.json` pointing to the stdio adapter (`bridge-stdio.mjs`)
 
 The script is idempotent -- running it twice won't duplicate anything. It handles both CLI and Desktop in one shot.
 
 ### Process management
 
 ```bash
-./install.sh --start      # Start the bridge server (PID saved to /tmp/cc-bridge.pid)
+./install.sh --start      # Start the bridge server (PID saved to /tmp/claude-bridge.pid)
 ./install.sh --stop       # Graceful stop (SIGTERM — closes SSE connections cleanly)
 ./install.sh --restart    # Stop then start
 ./install.sh --check      # Show status of everything
 ```
 
-Logs go to `/tmp/cc-bridge-server.log`.
+Logs go to `/tmp/claude-bridge-server.log`.
 
 ---
 
@@ -98,7 +98,7 @@ Add the `mcpServers` block (merge with existing content if the file already has 
 ```json
 {
   "mcpServers": {
-    "cc-bridge": {
+    "claude-bridge": {
       "command": "node",
       "args": ["/absolute/path/to/claude-bridge/bridge-stdio.mjs"]
     }
@@ -200,7 +200,7 @@ This applies to **Desktop sessions too** -- since they have no hooks at all, you
 
 Tell your agent:
 
-> "Clone https://github.com/vijay2411/claude-bridge, make the hook scripts executable, add the 5 hooks (SessionStart, UserPromptSubmit, PostToolUse, Stop, SessionEnd) from the hooks/ directory to my ~/.claude/settings.json, run `claude mcp add --transport sse --scope user bridge http://localhost:7400/sse`, copy skill/SKILL.md to ~/.claude/skills/cc-bridge/SKILL.md, and start the server with `./install.sh --start`"
+> "Clone https://github.com/vijay2411/claude-bridge, make the hook scripts executable, add the 5 hooks (SessionStart, UserPromptSubmit, PostToolUse, Stop, SessionEnd) from the hooks/ directory to my ~/.claude/settings.json, run `claude mcp add --transport sse --scope user bridge http://localhost:7400/sse`, copy skill/SKILL.md to ~/.claude/skills/claude-bridge/SKILL.md, and start the server with `./install.sh --start`"
 
 Or do it yourself -- see the [hook configuration JSON](#hook-configuration-reference) below.
 
@@ -208,7 +208,7 @@ Or do it yourself -- see the [hook configuration JSON](#hook-configuration-refer
 
 Tell your Desktop agent:
 
-> "Add an MCP server called 'cc-bridge' to my Claude Desktop config at ~/Library/Application Support/Claude/claude_desktop_config.json. The command is 'node' with args ['/path/to/claude-bridge/bridge-stdio.mjs']. Then restart the app."
+> "Add an MCP server called 'claude-bridge' to my Claude Desktop config at ~/Library/Application Support/Claude/claude_desktop_config.json. The command is 'node' with args ['/path/to/claude-bridge/bridge-stdio.mjs']. Then restart the app."
 
 ---
 
@@ -296,10 +296,10 @@ The installer touches these files and locations. All changes are fully reversibl
 |---|---|---|
 | Claude Code hooks | `~/.claude/settings.json` | Adds 5 hook entries (SessionStart, UserPromptSubmit, PostToolUse, Stop, SessionEnd) pointing to `hooks/*.sh` |
 | MCP server registration | Claude Code user config | Registers `bridge` MCP server (SSE transport, `http://localhost:7400/sse`) |
-| Bridge protocol skill | `~/.claude/skills/cc-bridge/SKILL.md` | Copies protocol docs as a Claude Code skill |
-| Desktop app config | `~/Library/Application Support/Claude/claude_desktop_config.json` | Adds `cc-bridge` MCP server entry pointing to `bridge-stdio.mjs` (macOS only) |
-| Temp files (runtime) | `/tmp/cc-bridge-*` | Session name files, confirmation stamps, MCP check cache, PID file |
-| Server log (runtime) | `/tmp/cc-bridge-server.log` | Append-only log from bridge-server.mjs |
+| Bridge protocol skill | `~/.claude/skills/claude-bridge/SKILL.md` | Copies protocol docs as a Claude Code skill |
+| Desktop app config | `~/Library/Application Support/Claude/claude_desktop_config.json` | Adds `claude-bridge` MCP server entry pointing to `bridge-stdio.mjs` (macOS only) |
+| Temp files (runtime) | `/tmp/claude-bridge-*` | Session name files, confirmation stamps, MCP check cache, PID file |
+| Server log (runtime) | `/tmp/claude-bridge-server.log` | Append-only log from bridge-server.mjs |
 
 **Legacy cleanup:** Older versions appended protocol docs directly to `~/.claude/CLAUDE.md`. The installer automatically detects and removes this if present.
 
@@ -326,25 +326,25 @@ For manual CLI setup, add to `~/.claude/settings.json`:
 {
   "hooks": {
     "SessionStart": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/cc-bridge/hooks/bridge-start-hook.sh" }] }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/claude-bridge/hooks/bridge-start-hook.sh" }] }
     ],
     "UserPromptSubmit": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/cc-bridge/hooks/bridge-prompt-hook.sh" }] }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/claude-bridge/hooks/bridge-prompt-hook.sh" }] }
     ],
     "PostToolUse": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/cc-bridge/hooks/bridge-hook.sh" }] }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/claude-bridge/hooks/bridge-hook.sh" }] }
     ],
     "Stop": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/cc-bridge/hooks/bridge-stop-hook.sh" }] }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/claude-bridge/hooks/bridge-stop-hook.sh" }] }
     ],
     "SessionEnd": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/cc-bridge/hooks/bridge-end-hook.sh" }] }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "/path/to/claude-bridge/hooks/bridge-end-hook.sh" }] }
     ]
   }
 }
 ```
 
-Replace `/path/to/cc-bridge` with the actual repo path.
+Replace `/path/to/claude-bridge` with the actual repo path.
 
 ## Uninstalling
 
@@ -357,13 +357,13 @@ Replace `/path/to/cc-bridge` with the actual repo path.
 Removes:
 - All 5 bridge hooks from `~/.claude/settings.json`
 - MCP server registration (`claude mcp remove bridge`)
-- Bridge protocol skill (`~/.claude/skills/cc-bridge/`)
+- Bridge protocol skill (`~/.claude/skills/claude-bridge/`)
 - Legacy CLAUDE.md protocol docs (if present from older versions)
 - Desktop app config entry from `claude_desktop_config.json`
-- All temp files (`/tmp/cc-bridge-*`)
+- All temp files (`/tmp/claude-bridge-*`)
 
 Relaunch the Desktop app after uninstalling. Stop the bridge server separately: `./install.sh --stop`.
 
 ### Or tell your agent
 
-> "Remove all bridge hooks from my settings.json, run `claude mcp remove bridge`, delete ~/.claude/skills/cc-bridge/, remove cc-bridge from my Claude Desktop config, and clean up /tmp/cc-bridge-* files"
+> "Remove all bridge hooks from my settings.json, run `claude mcp remove bridge`, delete ~/.claude/skills/claude-bridge/ (and the legacy ~/.claude/skills/cc-bridge/ if present), remove claude-bridge (and any legacy cc-bridge entry) from my Claude Desktop config, and clean up /tmp/claude-bridge-* files"

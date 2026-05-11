@@ -6,7 +6,7 @@ import { TestBridge, assert, reportAndExit, sleep } from "./lib.mjs";
 import http from "node:http";
 import fs from "node:fs";
 
-const LOG = "/tmp/cc-bridge-sse-close-test.log";
+const LOG = "/tmp/claude-bridge-sse-close-test.log";
 fs.writeFileSync(LOG, "");
 
 const bridge = new TestBridge(7403);

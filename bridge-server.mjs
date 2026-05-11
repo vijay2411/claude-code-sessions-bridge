@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * cc-bridge: MCP server enabling real-time Q&A between Claude Code sessions.
+ * claude-bridge: MCP server enabling real-time Q&A between Claude Code sessions.
  *
  * Two interfaces:
  *   1. MCP over SSE — Claude Code sessions connect here for tools (ask, reply, etc.)
@@ -267,7 +267,7 @@ async function executeTool(sseId, name, args) {
       if (claude_session_id) {
         claudeIdToName.set(claude_session_id, sName);
         try {
-          const namePath = `/tmp/cc-bridge-${claude_session_id}.name`;
+          const namePath = `/tmp/claude-bridge-${claude_session_id}.name`;
           fs.writeFileSync(namePath, sName);
         } catch (e) {
           console.log(`${ts()} ⚠ could not write name file: ${e.message}`);
@@ -441,7 +441,7 @@ const server = http.createServer(async (req, res) => {
 
     switch (rpc.method) {
       case "initialize":
-        result = { protocolVersion: "2024-11-05", serverInfo: { name: "cc-bridge", version: "2.1.0" }, capabilities: { tools: {} } };
+        result = { protocolVersion: "2024-11-05", serverInfo: { name: "claude-bridge", version: "2.3.0" }, capabilities: { tools: {} } };
         break;
       case "tools/list":
         result = { tools: TOOLS };
@@ -539,7 +539,7 @@ process.on("uncaughtException", (err) => { console.error("[bridge] uncaught exce
 process.on("unhandledRejection", (err) => { console.error("[bridge] unhandled rejection (kept running):", err); });
 
 // ─── PID file ──────────────────────────────────────────────────────────────
-const PID_FILE = "/tmp/cc-bridge.pid";
+const PID_FILE = "/tmp/claude-bridge.pid";
 
 function writePid() {
   fs.writeFileSync(PID_FILE, String(process.pid));
@@ -572,7 +572,7 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 server.listen(PORT, () => {
   writePid();
   console.log(`\n${"═".repeat(42)}`);
-  console.log(`  cc-bridge v2.3`);
+  console.log(`  claude-bridge v2.4`);
   console.log(`  PID:     ${process.pid}`);
   console.log(`  SSE:     http://localhost:${PORT}/sse`);
   console.log(`  Health:  http://localhost:${PORT}/health`);

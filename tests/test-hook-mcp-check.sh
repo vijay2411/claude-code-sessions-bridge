@@ -5,13 +5,13 @@
 set -u
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 FAKE_ID="HOOK-TEST-$$"
-MCP_FILE="/tmp/cc-bridge-${FAKE_ID}.mcp"
+MCP_FILE="/tmp/claude-bridge-${FAKE_ID}.mcp"
 
 PASS=0
 FAIL=0
 fail() { echo "  ✗ $1"; FAIL=$((FAIL+1)); }
 pass() { echo "  ✓ $1"; PASS=$((PASS+1)); }
-trap "rm -f $MCP_FILE /tmp/cc-bridge-${FAKE_ID}.*" EXIT
+trap "rm -f $MCP_FILE /tmp/claude-bridge-${FAKE_ID}.*" EXIT
 
 INPUT='{"session_id":"'"$FAKE_ID"'"}'
 

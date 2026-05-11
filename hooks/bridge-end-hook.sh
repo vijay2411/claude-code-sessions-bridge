@@ -1,5 +1,5 @@
 #!/bin/bash
-# bridge-end-hook.sh — SessionEnd hook for cc-bridge
+# bridge-end-hook.sh — SessionEnd hook for claude-bridge
 #
 # Cleans up the temp files when a session ends.
 
@@ -8,6 +8,8 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 
 [ -z "$SESSION_ID" ] && exit 0
 
+rm -f "/tmp/claude-bridge-${SESSION_ID}.name" "/tmp/claude-bridge-${SESSION_ID}.confirmed" "/tmp/claude-bridge-${SESSION_ID}.mcp"
+# Legacy paths from the cc-bridge era — clean these up too
 rm -f "/tmp/cc-bridge-${SESSION_ID}.name" "/tmp/cc-bridge-${SESSION_ID}.confirmed" "/tmp/cc-bridge-${SESSION_ID}.mcp"
 
 exit 0

@@ -1,5 +1,5 @@
 #!/bin/bash
-# bridge-start-hook.sh — SessionStart hook for cc-bridge
+# bridge-start-hook.sh — SessionStart hook for claude-bridge
 #
 # Auto-generates a session name, stores it, and instructs Claude to register.
 # No env vars needed — uses session_id from stdin to key the temp file.
@@ -17,7 +17,7 @@ SOURCE=$(echo "$INPUT" | jq -r '.source // "startup"')
 [ -z "$SESSION_ID" ] && exit 0
 
 # Check if bridge MCP is registered — cache for other hooks
-MCP_FILE="/tmp/cc-bridge-${SESSION_ID}.mcp"
+MCP_FILE="/tmp/claude-bridge-${SESSION_ID}.mcp"
 if claude mcp list 2>/dev/null | grep -q "bridge"; then
   echo "yes" > "$MCP_FILE"
 else
@@ -30,13 +30,13 @@ if ! curl -sf --max-time 1 "http://localhost:${PORT}/health" > /dev/null 2>&1; t
   exit 0
 fi
 
-NAME_FILE="/tmp/cc-bridge-${SESSION_ID}.name"
+NAME_FILE="/tmp/claude-bridge-${SESSION_ID}.name"
 
 # If resuming and name file exists, reuse the existing name
 if [ -f "$NAME_FILE" ]; then
   BRIDGE_NAME=$(cat "$NAME_FILE")
   echo ""
-  echo "🔗 cc-bridge: Reconnecting as \"${BRIDGE_NAME}\""
+  echo "🔗 claude-bridge: Reconnecting as \"${BRIDGE_NAME}\""
   echo "→ Call register(name=\"${BRIDGE_NAME}\", description=\"what you're working on\", claude_session_id=\"${SESSION_ID}\") to rejoin the bridge."
   echo "  IMPORTANT: pass claude_session_id exactly as shown — it lets the hook find your registered name if you rename later."
   echo "→ Then call list_sessions() to see who else is connected."
@@ -59,7 +59,7 @@ echo "$BRIDGE_NAME" > "$NAME_FILE"
 
 # Print into Claude's context — Claude will see this and act on it
 echo ""
-echo "🔗 cc-bridge: Your default session name is \"${BRIDGE_NAME}\""
+echo "🔗 claude-bridge: Your default session name is \"${BRIDGE_NAME}\""
 echo "→ Call register(name=\"${BRIDGE_NAME}\", description=\"brief description of your current task\", claude_session_id=\"${SESSION_ID}\") as your FIRST action."
 echo "  IMPORTANT: pass claude_session_id exactly as shown — it lets the hook find your registered name even if you later rename."
 echo "  You may pick a different friendly name if you prefer (e.g. \"frontend\"); just call register again with the new name and the same claude_session_id."

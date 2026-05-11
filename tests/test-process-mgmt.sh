@@ -12,7 +12,7 @@ FAIL=0
 fail() { echo "  ✗ $1"; FAIL=$((FAIL+1)); }
 pass() { echo "  ✓ $1"; PASS=$((PASS+1)); }
 
-cleanup() { lsof -ti:"$PORT" 2>/dev/null | xargs kill 2>/dev/null; rm -f /tmp/cc-bridge.pid; }
+cleanup() { lsof -ti:"$PORT" 2>/dev/null | xargs kill 2>/dev/null; rm -f /tmp/claude-bridge.pid; }
 trap cleanup EXIT
 
 cleanup
@@ -32,7 +32,7 @@ else
   fail "health endpoint did not respond after --start"
 fi
 
-if [ -f /tmp/cc-bridge.pid ]; then
+if [ -f /tmp/claude-bridge.pid ]; then
   pass "PID file written"
 else
   fail "PID file not written"

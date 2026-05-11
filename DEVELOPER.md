@@ -1,6 +1,6 @@
 # DEVELOPER.md
 
-Working notes for whoever maintains cc-bridge next — including future-me. This is the file you read **before** changing anything non-trivial.
+Working notes for whoever maintains claude-bridge next — including future-me. This is the file you read **before** changing anything non-trivial.
 
 ---
 
@@ -36,7 +36,7 @@ Tactical reminders are already embedded in the "When you add a new tool / hook /
 
 ## What this project is, in one paragraph
 
-cc-bridge is a localhost-only message broker that lets multiple Claude sessions (Claude Code CLI + Claude Desktop app) talk to each other in real time. It runs one Node.js server (`bridge-server.mjs`) on port 7400 with two transports: MCP-over-SSE for CLI sessions, and MCP-over-stdio (via `bridge-stdio.mjs` adapter) for the Desktop app. Five shell hooks plug into Claude Code's lifecycle to auto-register sessions, inject pending questions, and clean up on exit. State is in-memory with a 30-day TTL.
+claude-bridge (internally still aliased as `cc-bridge` in some runtime paths) is a localhost-only message broker that lets multiple Claude sessions (Claude Code CLI + Claude Desktop app) talk to each other in real time. It runs one Node.js server (`bridge-server.mjs`) on port 7400 with two transports: MCP-over-SSE for CLI sessions, and MCP-over-stdio (via `bridge-stdio.mjs` adapter) for the Desktop app. Five shell hooks plug into Claude Code's lifecycle to auto-register sessions, inject pending questions, and clean up on exit. State is in-memory with a 30-day TTL.
 
 ---
 
@@ -61,12 +61,12 @@ These are absolute principles the user has stated explicitly. Don't second-guess
 Claude Code CLI ──SSE──┐
                        ├── bridge-server.mjs ──┐
 Claude Desktop ──stdio──┘   (port 7400)        │
-                                                ├── /tmp/cc-bridge-*  (session name files, MCP cache, stamps, PID)
-                                                ├── /tmp/cc-bridge-server.log
+                                                ├── /tmp/claude-bridge-*  (session name files, MCP cache, stamps, PID)
+                                                ├── /tmp/claude-bridge-server.log
                                                 └── In-memory state (messages, threads, scratchpads — 30d TTL)
 
 ~/.claude/settings.json                       — 5 hooks point to hooks/*.sh
-~/.claude/skills/cc-bridge/SKILL.md            — protocol docs (loaded on-demand by Claude)
+~/.claude/skills/claude-bridge/SKILL.md        — protocol docs (loaded on-demand by Claude)
 ~/.claude/.cc-bridge-version                   — installed version marker
 ~/.claude/.cc-bridge-manifest                  — list of files/dirs install touched (for uninstall)
 ~/Library/Application Support/Claude/claude_desktop_config.json  — Desktop MCP entry (macOS)
@@ -80,7 +80,7 @@ Claude Desktop ──stdio──┘   (port 7400)        │
 | UserPromptSubmit | User sends a message | If not registered, force registration before the agent responds |
 | PostToolUse | After every tool call | Poll /pending, inject any bridge questions as additionalContext |
 | Stop | Agent finishes a turn | If questions pending, return `{decision:"block", reason:...}` to keep agent running |
-| SessionEnd | Session ends | Clean up `/tmp/cc-bridge-${SESSION_ID}.*` files |
+| SessionEnd | Session ends | Clean up `/tmp/claude-bridge-${SESSION_ID}.*` files |
 
 ### MCP tool list
 
@@ -91,7 +91,7 @@ Claude Desktop ──stdio──┘   (port 7400)        │
 ## Hard-learned lessons (DO NOT redo these)
 
 ### 1. `os.tmpdir()` on macOS returns a per-user directory, NOT `/tmp`
-`/var/folders/.../T/` — so if the bridge writes its PID there but install.sh reads `/tmp/cc-bridge.pid`, the file is invisible to the script. **Always hardcode `/tmp/cc-bridge.pid`** (and other shared files) so the server, hooks, and install.sh agree.
+`/var/folders/.../T/` — so if the bridge writes its PID there but install.sh reads `/tmp/claude-bridge.pid`, the file is invisible to the script. **Always hardcode `/tmp/claude-bridge.pid`** (and other shared files) so the server, hooks, and install.sh agree.
 
 ### 2. SSE has only one connection that receives JSON-RPC responses
 If you connect to `/sse` twice, only one connection gets the responses. Tests that open multiple SSE connections will hang on tool calls. Keep one persistent SSE connection per logical client.
@@ -127,7 +127,7 @@ Claude Code reads `description` from SKILL.md frontmatter to decide when to auto
 A user reported that appending ~70 lines of protocol docs to their global `~/.claude/CLAUDE.md` was invasive — every Claude session everywhere paid the token cost. Switched to the skill model. **Never append to CLAUDE.md again.** The legacy cleanup function (`remove_claude_md_legacy`) stays in install.sh to fix older installs.
 
 ### 13. The bridge MCP isn't loaded in pre-install sessions
-If you install cc-bridge mid-session, hooks fire (settings.json is hot-loaded) but MCP tools aren't available (MCP connects at session start). Hooks now check `/tmp/cc-bridge-${SESSION_ID}.mcp` written by SessionStart — if MCP isn't registered, they exit silently. Otherwise they'd spam every tool call telling the agent to call `register()` when the tool doesn't exist.
+If you install cc-bridge mid-session, hooks fire (settings.json is hot-loaded) but MCP tools aren't available (MCP connects at session start). Hooks now check `/tmp/claude-bridge-${SESSION_ID}.mcp` written by SessionStart — if MCP isn't registered, they exit silently. Otherwise they'd spam every tool call telling the agent to call `register()` when the tool doesn't exist.
 
 ### 14. The "MCP installed" check via `claude mcp list` is slow (~1s)
 Run it ONCE per session in SessionStart and cache the result. Other hooks just read the cache.
@@ -259,7 +259,7 @@ npm test
 1. Add the script to `hooks/`
 2. Add an entry to `HOOK_MAP` in `install.sh`
 3. The script MUST exit 0 on bridge-down (the install assumes hooks are resilient)
-4. The script MUST check `/tmp/cc-bridge-${SESSION_ID}.mcp` and exit silently if "no" — this is the anti-spam pattern
+4. The script MUST check `/tmp/claude-bridge-${SESSION_ID}.mcp` and exit silently if "no" — this is the anti-spam pattern
 5. Update the hook count in `check_hooks()` (currently expects 5)
 6. Update USAGE.md hook configuration reference
 7. Extend `tests/test-hook-mcp-check.sh` to cover the new hook's silence/run-clean contract
@@ -281,7 +281,7 @@ npm test
 
 ## Frequent TODOs (work that's perpetually almost-worth-doing)
 
-- [ ] **Bridge logs**: rotate `/tmp/cc-bridge-server.log` — currently grows unbounded.
+- [ ] **Bridge logs**: rotate `/tmp/claude-bridge-server.log` — currently grows unbounded.
 - [ ] **Test suite**: extract the end-to-end script into a proper `npm test`.
 - [ ] **Linux verification**: README says Linux "should work, untested." Actually test it.
 - [ ] **Persistence option**: optional SQLite backing for messages so server restarts don't lose state.
@@ -334,9 +334,9 @@ These are not blockers. Each is a one-or-two-evening project. None are urgent �
 ./install.sh --restart            # Stop + start
 
 curl -sf localhost:7400/health    # Server health + active session count
-tail -f /tmp/cc-bridge-server.log # Server logs
-cat /tmp/cc-bridge.pid            # Currently running bridge PID
-ls /tmp/cc-bridge-*               # Per-session state files
+tail -f /tmp/claude-bridge-server.log # Server logs
+cat /tmp/claude-bridge.pid            # Currently running bridge PID
+ls /tmp/claude-bridge-*               # Per-session state files
 
 claude mcp list                   # Verify bridge MCP is registered with Claude Code
 claude mcp remove bridge          # Remove the MCP registration (uninstall does this)

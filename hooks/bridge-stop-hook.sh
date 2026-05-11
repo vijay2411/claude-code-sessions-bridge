@@ -1,5 +1,5 @@
 #!/bin/bash
-# bridge-stop-hook.sh — Stop hook for cc-bridge
+# bridge-stop-hook.sh — Stop hook for claude-bridge
 #
 # Fires when Claude finishes responding (about to go idle). If there are pending
 # bridge questions for this session, blocks the stop and feeds the question back
@@ -16,7 +16,7 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 [ -z "$SESSION_ID" ] && exit 0
 
 # Skip if bridge MCP is not registered (session predates install or MCP removed)
-MCP_FILE="/tmp/cc-bridge-${SESSION_ID}.mcp"
+MCP_FILE="/tmp/claude-bridge-${SESSION_ID}.mcp"
 if [ -f "$MCP_FILE" ] && [ "$(cat "$MCP_FILE")" = "no" ]; then
   exit 0
 fi
@@ -26,7 +26,7 @@ WHOAMI=$(curl -sf --max-time 1 "http://localhost:${PORT}/whoami?session_id=${SES
 SESSION=$(echo "$WHOAMI" | jq -r '.name // empty' 2>/dev/null)
 
 if [ -z "$SESSION" ]; then
-  NAME_FILE="/tmp/cc-bridge-${SESSION_ID}.name"
+  NAME_FILE="/tmp/claude-bridge-${SESSION_ID}.name"
   [ -f "$NAME_FILE" ] || exit 0
   SESSION=$(cat "$NAME_FILE")
 fi

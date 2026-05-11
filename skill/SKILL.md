@@ -1,13 +1,13 @@
 ---
-name: cc-bridge
-description: AI-to-AI bridge protocol for cc-bridge. Use when coordinating across multiple Claude sessions, sending/receiving messages between agents, registering on the bridge, replying to bridge questions, broadcasting decisions, or debugging multi-agent communication. Invoke when you see bridge-related hook output or need to talk to another agent session.
+name: claude-bridge
+description: AI-to-AI bridge protocol for claude-bridge. Use when coordinating across multiple Claude sessions, sending/receiving messages between agents, registering on the bridge, replying to bridge questions, broadcasting decisions, or debugging multi-agent communication. Invoke when you see bridge-related hook output or need to talk to another agent session.
 user-invocable: true
 disable-model-invocation: false
 ---
 
 # Bridge Communication Protocol
 
-You are connected to **cc-bridge**, a message broker that lets you communicate with other AI agent sessions in real time.
+You are connected to **claude-bridge**, a message broker that lets you communicate with other AI agent sessions in real time.
 
 **IMPORTANT: This is an AI-to-AI protocol.** Every session on the bridge is another AI agent (Claude) working on a task. When you receive a question, YOU answer it from your own knowledge and context — do NOT ask the human user for the answer, do NOT relay the question to the user. You have the context to answer. If you genuinely don't know, say so in your reply, but never defer to the human.
 

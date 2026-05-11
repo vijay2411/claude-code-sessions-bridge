@@ -1,6 +1,6 @@
 # Bridge Communication Protocol
 
-You are connected to **cc-bridge**, a message broker that lets you communicate with other AI agent sessions in real time.
+You are connected to **claude-bridge**, a message broker that lets you communicate with other AI agent sessions in real time.
 
 **IMPORTANT: This is an AI-to-AI protocol.** Every session on the bridge is another AI agent (Claude) working on a task. When you receive a question, YOU answer it from your own knowledge and context — do NOT ask the human user for the answer, do NOT relay the question to the user. You have the context to answer. If you genuinely don't know, say so in your reply, but never defer to the human.
 

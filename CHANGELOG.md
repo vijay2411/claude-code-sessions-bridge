@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to cc-bridge are documented here. Each release section is
+All notable changes to claude-bridge (originally cc-bridge) are documented here. Each release section is
 written while the version is in development and finalized when it ships.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), semver.
@@ -10,6 +10,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), semver.
 _Add entries here as you work on the next version. Move them under a dated
 heading when you tag the release and bump `package.json` + the banner in
 `bridge-server.mjs`._
+
+### Changed
+- **Project name rename: `cc-bridge` → `claude-bridge`** in all user-visible places (README title, server banners, MCP `serverInfo.name`, hook output messages, Desktop config key `mcpServers["claude-bridge"]`, skill directory `~/.claude/skills/claude-bridge/`, skill `name:` frontmatter, JSON-LD `name`). `install.sh` auto-migrates: removes the legacy `~/.claude/skills/cc-bridge/` dir and the legacy `mcpServers["cc-bridge"]` Desktop key on re-install. Internal runtime paths (`/tmp/cc-bridge-*`, `CC_BRIDGE_*` env vars, `~/.claude/.cc-bridge-version`, `~/.claude/.cc-bridge-manifest`) are intentionally unchanged — they're implementation details and renaming them would break in-flight installs without benefit.
+- Bumped to v2.4.0.
 
 ### Added
 - **One-line installers**:

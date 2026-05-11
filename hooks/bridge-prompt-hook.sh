@@ -1,5 +1,5 @@
 #!/bin/bash
-# bridge-prompt-hook.sh — UserPromptSubmit hook for cc-bridge
+# bridge-prompt-hook.sh — UserPromptSubmit hook for claude-bridge
 #
 # Behavior matrix:
 #   - MCP not registered → silent (skip)
@@ -17,7 +17,7 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 [ -z "$SESSION_ID" ] && exit 0
 
 # Skip if bridge MCP is not registered (session predates install or MCP removed)
-MCP_FILE="/tmp/cc-bridge-${SESSION_ID}.mcp"
+MCP_FILE="/tmp/claude-bridge-${SESSION_ID}.mcp"
 if [ -f "$MCP_FILE" ] && [ "$(cat "$MCP_FILE")" = "no" ]; then
   exit 0
 fi
@@ -25,7 +25,7 @@ fi
 HEALTH=$(curl -sf --max-time 1 "http://localhost:${PORT}/health" 2>/dev/null)
 [ -z "$HEALTH" ] && exit 0
 
-STAMP="/tmp/cc-bridge-${SESSION_ID}.confirmed"
+STAMP="/tmp/claude-bridge-${SESSION_ID}.confirmed"
 
 WHOAMI=$(curl -sf --max-time 1 "http://localhost:${PORT}/whoami?session_id=${SESSION_ID}" 2>/dev/null)
 NAME=$(echo "$WHOAMI" | jq -r '.name // empty' 2>/dev/null)
@@ -42,7 +42,7 @@ if [ -n "$NAME" ]; then
     PEERS=$(echo "$HEALTH" | jq -r --arg me "$NAME" \
       '[.sessions[] | select(.name != $me) | "\"\(.name)\"" + (if .description != "" then " (\(.description))" else "" end)] | if length == 0 then "(none yet)" else join(", ") end' 2>/dev/null)
 
-    MSG="🔗 cc-bridge: You're registered as \"${NAME}\".
+    MSG="🔗 claude-bridge: You're registered as \"${NAME}\".
 Other sessions online: ${PEERS}.
 Use list_sessions(), get_thread(with_session=...), or ask(to=...) to interact. This message will not appear again unless your registration is lost."
 
@@ -57,7 +57,7 @@ Use list_sessions(), get_thread(with_session=...), or ask(to=...) to interact. T
 fi
 
 # Not registered → inject "register first" instruction
-NAME_FILE="/tmp/cc-bridge-${SESSION_ID}.name"
+NAME_FILE="/tmp/claude-bridge-${SESSION_ID}.name"
 if [ -f "$NAME_FILE" ]; then
   SUGGESTED=$(cat "$NAME_FILE")
 else
@@ -66,7 +66,7 @@ else
   SUGGESTED="${DIR_NAME}-${SUFFIX}"
 fi
 
-MSG="🔗 cc-bridge: This session is not yet registered with the bridge. BEFORE responding to the user's message above, your FIRST action MUST be to call:
+MSG="🔗 claude-bridge: This session is not yet registered with the bridge. BEFORE responding to the user's message above, your FIRST action MUST be to call:
 
   register(name=\"${SUGGESTED}\", description=\"<short description of what you're working on, inferred from context>\", claude_session_id=\"${SESSION_ID}\")
 

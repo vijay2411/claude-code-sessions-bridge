@@ -1,6 +1,6 @@
 {
   "name": "@vijay2411/claude-bridge",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Real-time Q&A between Claude sessions — Claude Code CLI, Claude Desktop, and Cowork. AI-to-AI message broker over MCP.",
   "main": "bridge-server.mjs",
   "type": "module",
