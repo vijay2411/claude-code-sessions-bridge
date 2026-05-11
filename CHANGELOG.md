@@ -12,6 +12,13 @@ heading when you tag the release and bump `package.json` + the banner in
 `bridge-server.mjs`._
 
 ### Added
+- **One-line installers**:
+  - `curl -fsSL https://vijay2411.github.io/claude-bridge/install.sh | bash` — bootstrap script hosted on the Pages site clones the repo to `~/.local/share/claude-bridge` and runs the in-repo `install.sh`.
+  - `npx @vijay2411/claude-bridge install` — published as a scoped npm package. The `bin/cli.mjs` wrapper copies package files to the same `~/.local/share/claude-bridge` location before running `install.sh`, so absolute paths written to `~/.claude/settings.json` survive npm cache cleanup. Other subcommands: `start`, `stop`, `restart`, `check`, `uninstall`, `serve`, `help`.
+  - Both install paths land in the same directory and produce identical state.
+- **`bin/cli.mjs`** — Node CLI dispatcher for the npm package.
+- **`site/install.sh`** — bootstrap script served via GitHub Pages.
+- Install CTA on the site now shows both `curl` and `npx` commands side by side.
 - **GitHub Pages deploy** — site shipped at <https://vijay2411.github.io/claude-bridge/>. `.github/workflows/deploy-pages.yml` deploys `site/` on every push to `main` that touches `site/**`. Canonical, og:url, twitter:image, sitemap, robots all point at the Pages URL.
 - **Showcase site at `site/`** — single-page static landing built with the `anti-slop-frontend` skill workflow. Hero animation is a hand-sketched SVG node graph: 5 labeled Claude agents (frontend / backend / research / db / tests) connected with pencil-wobble lines, with message packets traveling along the wires and a live transcript mirroring the conversation. Editorial dark palette (warm-black + bone + acid-yellow + terracotta + dusty teal), JetBrains Mono display + Instrument Serif italic accents, no build step. Local preview: `cd site && python3 -m http.server 5173`.
 - **SEO pass on `site/`** — full `<head>` metadata, Open Graph + Twitter Card with 1200x630 `og-image.png`, JSON-LD `SoftwareApplication` block, favicon set (`favicon.ico`, `favicon.svg`, `apple-touch-icon.png`), web app `manifest.json`, `robots.txt`, `sitemap.xml`, semantic HTML audit, skip-link, focus rings, SVG `<title>`/`<desc>`. Lighthouse: SEO/A11y/Best-Practices 100, Performance 91.

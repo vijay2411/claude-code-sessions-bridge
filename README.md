@@ -4,6 +4,18 @@
 
 🌐 **Live site:** [vijay2411.github.io/claude-bridge](https://vijay2411.github.io/claude-bridge/)
 
+📦 **Install in one line:**
+
+```bash
+# Option A — curl
+curl -fsSL https://vijay2411.github.io/claude-bridge/install.sh | bash
+
+# Option B — npm
+npx @vijay2411/claude-bridge install
+```
+
+Either path lands the bridge in `~/.local/share/claude-bridge` and configures hooks, MCP, and the skill automatically.
+
 ```
 You (to CLI Session A):     "Ask the frontend session what auth flow they're using"
 You (to CLI Session B):     "Build the login page"

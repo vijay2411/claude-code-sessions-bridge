@@ -1,9 +1,24 @@
 {
-  "name": "cc-bridge",
-  "version": "2.2.0",
-  "description": "Real-time Q&A between Claude sessions — CLI, Desktop app, and Cowork",
+  "name": "@vijay2411/claude-bridge",
+  "version": "2.3.0",
+  "description": "Real-time Q&A between Claude sessions — Claude Code CLI, Claude Desktop, and Cowork. AI-to-AI message broker over MCP.",
   "main": "bridge-server.mjs",
   "type": "module",
+  "bin": {
+    "claude-bridge": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin/",
+    "bridge-server.mjs",
+    "bridge-stdio.mjs",
+    "hooks/",
+    "skill/",
+    "install.sh",
+    "BRIDGE.md",
+    "USAGE.md",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node bridge-server.mjs",
     "test": "./tests/run-all.sh",
@@ -12,20 +27,36 @@
     "check": "./install.sh --check",
     "bridge:start": "./install.sh --start",
     "bridge:stop": "./install.sh --stop",
-    "bridge:restart": "./install.sh --restart"
+    "bridge:restart": "./install.sh --restart",
+    "prepublishOnly": "./tests/run-all.sh"
   },
   "keywords": [
     "claude-code",
+    "claude",
+    "anthropic",
     "mcp",
-    "bridge",
-    "multi-session",
-    "inter-session",
-    "sse",
-    "stdio",
-    "claude-desktop"
+    "model-context-protocol",
+    "multi-agent",
+    "ai-agents",
+    "claude-desktop",
+    "agent-communication",
+    "inter-process-communication",
+    "nodejs",
+    "zero-dependencies"
   ],
   "author": "Vedant Vijay <vedant@mugyen.com>",
   "license": "MIT",
+  "homepage": "https://vijay2411.github.io/claude-bridge/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vijay2411/claude-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vijay2411/claude-bridge/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=18.0.0"
   }
