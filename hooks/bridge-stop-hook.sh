@@ -15,9 +15,18 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 
 [ -z "$SESSION_ID" ] && exit 0
 
-# Skip if bridge MCP is not registered (session predates install or MCP removed)
+# Skip if bridge MCP is not registered. Seed cache lazily for mid-session installs
+# where SessionStart never ran.
 MCP_FILE="/tmp/claude-bridge-${SESSION_ID}.mcp"
-if [ -f "$MCP_FILE" ] && [ "$(cat "$MCP_FILE")" = "no" ]; then
+if [ ! -f "$MCP_FILE" ]; then
+  if claude mcp list 2>/dev/null | grep -q "bridge"; then
+    echo "yes" > "$MCP_FILE"
+  else
+    echo "no" > "$MCP_FILE"
+    exit 0
+  fi
+fi
+if [ "$(cat "$MCP_FILE")" = "no" ]; then
   exit 0
 fi
 

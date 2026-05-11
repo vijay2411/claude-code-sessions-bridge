@@ -410,7 +410,7 @@ check_desktop() {
   elif jq -e '.mcpServers["cc-bridge"]' "$DESKTOP_CONFIG" &>/dev/null; then
     warn "Legacy 'cc-bridge' Desktop config key present — re-run install to migrate to 'claude-bridge'"
   else
-    warn "Desktop app not configured (optional — run install to add)"
+    ok "Desktop app not configured (optional)"
   fi
 }
 

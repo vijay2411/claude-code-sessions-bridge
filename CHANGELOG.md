@@ -11,6 +11,29 @@ _Add entries here as you work on the next version. Move them under a dated
 heading when you tag the release and bump `package.json` + the banner in
 `bridge-server.mjs`._
 
+### Fixed
+- **Hook MCP-cache fallthrough on mid-session installs.** When `claude-bridge` is
+  installed during an already-open Claude Code session, the SessionStart hook
+  never fired for that session, so `/tmp/claude-bridge-${SESSION_ID}.mcp` doesn't
+  exist. The previous check only silenced output when the cache file existed and
+  said `no`, which meant pre-install sessions kept getting nag spam on every
+  tool call. Now each hook (PostToolUse, Stop, UserPromptSubmit) seeds the cache
+  lazily on first run by running `claude mcp list` once and writing the result.
+  Cost: ~1 second on the first tool call of a pre-install session; subsequent
+  calls are instant.
+
+### Added
+- **Three new test cases** in `tests/test-hook-mcp-check.sh` covering the
+  cache-missing path that the production bug exposed: cache-missing-and-bridge-absent
+  (must seed `no` and exit silently), cache-missing-and-bridge-present (must seed
+  `yes` and proceed). Uses a PATH-shimmed `claude` stub to simulate both outcomes
+  deterministically. Suite is now 12 assertions (was 6).
+
+### Changed
+- `install.sh --check` no longer shows a yellow `!` for the Desktop app when it's
+  simply not configured — the Desktop app is optional, so a missing config is
+  green-checkmark "ok" status, not a warning.
+
 ### Changed
 - **Project name rename: `cc-bridge` → `claude-bridge`** in all user-visible places (README title, server banners, MCP `serverInfo.name`, hook output messages, Desktop config key `mcpServers["claude-bridge"]`, skill directory `~/.claude/skills/claude-bridge/`, skill `name:` frontmatter, JSON-LD `name`). `install.sh` auto-migrates: removes the legacy `~/.claude/skills/cc-bridge/` dir and the legacy `mcpServers["cc-bridge"]` Desktop key on re-install. Internal runtime paths (`/tmp/cc-bridge-*`, `CC_BRIDGE_*` env vars, `~/.claude/.cc-bridge-version`, `~/.claude/.cc-bridge-manifest`) are intentionally unchanged — they're implementation details and renaming them would break in-flight installs without benefit.
 - Bumped to v2.4.0.
