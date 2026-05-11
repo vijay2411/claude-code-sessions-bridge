@@ -13,8 +13,8 @@ For Desktop app support, you only need Node.js >= 18 and the Claude Desktop app.
 ### What you do (one-time, ~2 minutes)
 
 ```bash
-git clone git@github.com:vijay2411/claude-code-sessions-bridge.git
-cd claude-code-sessions-bridge
+git clone git@github.com:vijay2411/claude-bridge.git
+cd claude-bridge
 ./install.sh
 ./install.sh --start
 ```
@@ -84,7 +84,7 @@ Add the `mcpServers` block (merge with existing content if the file already has 
   "mcpServers": {
     "cc-bridge": {
       "command": "node",
-      "args": ["/absolute/path/to/claude-code-sessions-bridge/bridge-stdio.mjs"]
+      "args": ["/absolute/path/to/claude-bridge/bridge-stdio.mjs"]
     }
   }
 }
@@ -184,7 +184,7 @@ This applies to **Desktop sessions too** -- since they have no hooks at all, you
 
 Tell your agent:
 
-> "Clone https://github.com/vijay2411/claude-code-sessions-bridge, make the hook scripts executable, add the 5 hooks (SessionStart, UserPromptSubmit, PostToolUse, Stop, SessionEnd) from the hooks/ directory to my ~/.claude/settings.json, run `claude mcp add --transport sse --scope user bridge http://localhost:7400/sse`, copy skill/SKILL.md to ~/.claude/skills/cc-bridge/SKILL.md, and start the server with `./install.sh --start`"
+> "Clone https://github.com/vijay2411/claude-bridge, make the hook scripts executable, add the 5 hooks (SessionStart, UserPromptSubmit, PostToolUse, Stop, SessionEnd) from the hooks/ directory to my ~/.claude/settings.json, run `claude mcp add --transport sse --scope user bridge http://localhost:7400/sse`, copy skill/SKILL.md to ~/.claude/skills/cc-bridge/SKILL.md, and start the server with `./install.sh --start`"
 
 Or do it yourself -- see the [hook configuration JSON](#hook-configuration-reference) below.
 
@@ -192,7 +192,7 @@ Or do it yourself -- see the [hook configuration JSON](#hook-configuration-refer
 
 Tell your Desktop agent:
 
-> "Add an MCP server called 'cc-bridge' to my Claude Desktop config at ~/Library/Application Support/Claude/claude_desktop_config.json. The command is 'node' with args ['/path/to/claude-code-sessions-bridge/bridge-stdio.mjs']. Then restart the app."
+> "Add an MCP server called 'cc-bridge' to my Claude Desktop config at ~/Library/Application Support/Claude/claude_desktop_config.json. The command is 'node' with args ['/path/to/claude-bridge/bridge-stdio.mjs']. Then restart the app."
 
 ---
 

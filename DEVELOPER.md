@@ -129,101 +129,86 @@ The uninstaller reads the manifest first (removes everything listed), then runs 
 
 ---
 
+## CHANGELOG discipline
+
+`CHANGELOG.md` is the canonical record of what shipped when. Update it
+**while you work**, not after.
+
+- Every time you start a new version, open `[Unreleased]` and add entries
+  under `Added`, `Changed`, `Fixed`, `Removed`, or `Deprecated` as you go.
+- When you tag a release, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD`
+  and create a fresh empty `[Unreleased]` at the top.
+- Each entry is one short line — the *what* and the *why*, not the *how*.
+  PR descriptions and commit messages hold the implementation details.
+- Bumping `package.json` `version` and the banner in `bridge-server.mjs`
+  is half the release; finalizing the CHANGELOG entry is the other half.
+
+If you can't summarize a change in one line for CHANGELOG, the change is
+probably too big — split it.
+
 ## Release checklist
 
 Before tagging a release:
 
-1. [ ] Bump `package.json` `version`
-2. [ ] Bump version string in `bridge-server.mjs` startup banner
-3. [ ] Run `./install.sh --uninstall` then `./install.sh` then `./install.sh --check` — all green
-4. [ ] Restart bridge with `./install.sh --restart`, verify health endpoint
-5. [ ] Test the broadcast crash repro (see "End-to-end test" below) — must NOT crash
-6. [ ] Update README "Status" section if non-trivial new features
-7. [ ] Update USAGE.md if any user-facing flag/command changed
-8. [ ] Update this DEVELOPER.md if you learned anything new
-9. [ ] One squash commit per logical change, descriptive message
+1. [ ] All entries for this version are under a dated heading in `CHANGELOG.md` (no leftovers under `[Unreleased]` unless intentional)
+2. [ ] Bump `package.json` `version`
+3. [ ] Bump version string in `bridge-server.mjs` startup banner
+4. [ ] `npm test` — all green, zero failures
+5. [ ] `./install.sh --uninstall` then `./install.sh` then `./install.sh --check` — all green
+6. [ ] Restart bridge with `./install.sh --restart`, verify health endpoint
+7. [ ] Update README "Status" section if non-trivial new features
+8. [ ] Update USAGE.md if any user-facing flag/command changed
+9. [ ] Update this DEVELOPER.md if you learned anything new
+10. [ ] One squash commit per logical change, descriptive message
 
 ---
 
 ## How to test changes
 
-### Quick smoke (after any change)
+### Run the test suite
+
+```bash
+npm test           # or: ./tests/run-all.sh
+```
+
+`run-all.sh` auto-discovers every `tests/test-*.mjs` and `tests/test-*.sh` file
+and runs them in sequence. It exits non-zero if any test fails. The suite uses
+port 7402–7404 so it won't disturb a running production bridge on 7400.
+
+### Test layout
+
+```
+tests/
+├── lib.mjs                       # shared SSE + JSON-RPC helpers; assert() / reportAndExit()
+├── run-all.sh                    # discovers and runs every test, prints summary
+├── test-tools.mjs                # MCP tools: register, broadcast, list_sessions, check_inbox, ...
+├── test-graceful-shutdown.mjs    # SIGTERM emits `event: close` before exit
+├── test-hook-mcp-check.sh        # hooks silent when MCP=no, runs clean when MCP=yes
+└── test-process-mgmt.sh          # install.sh --start / --stop / --restart, PID file, idempotency
+```
+
+### Rule: every new feature ships with a test
+
+When you add a tool, a hook, a flag, or a server behaviour, add or extend a
+test in `tests/`. The discovery is automatic — any file matching
+`tests/test-*.{mjs,sh}` is picked up.
+
+- New MCP tool? Add assertions to `tests/test-tools.mjs` using the `bridge.call(...)` helper.
+- New install.sh flag? Add a `tests/test-<name>.sh` script that exits 0 on
+  success and non-zero on failure. Use port 7404 (or a fresh one) so it
+  doesn't collide with other tests.
+- New server-level behaviour (shutdown, GC, reconnect)? New `tests/test-<name>.mjs`
+  using `TestBridge` from `lib.mjs`.
+
+### Manual smoke (after any change)
 
 ```bash
 ./install.sh --restart
 ./install.sh --check
-curl -sf http://localhost:7400/health | jq
+npm test
 ```
 
-All three must succeed. `--check` should show green for hooks, MCP, skill, Desktop config, and bridge running.
-
-### End-to-end test (after server changes)
-
-Free the test port, then run this Node script — it connects via SSE, calls register(), broadcasts with good and bad inputs, and verifies the server stays alive.
-
-```bash
-lsof -ti:7402 | xargs kill 2>/dev/null; sleep 1
-CC_BRIDGE_PORT=7402 node bridge-server.mjs &
-sleep 2
-
-node --input-type=module -e '
-import http from "node:http";
-const PORT = 7402;
-const responses = new Map();
-let sid;
-await new Promise((resolve) => {
-  http.get(`http://localhost:${PORT}/sse`, (res) => {
-    let buf = "";
-    res.on("data", (chunk) => {
-      buf += chunk.toString();
-      const parts = buf.split("\n\n"); buf = parts.pop();
-      for (const p of parts) {
-        const dm = p.match(/^data: (.+)$/m); if (!dm) continue;
-        const data = dm[1];
-        const sm = data.match(/session=([a-f0-9-]+)/);
-        if (sm && !sid) { sid = sm[1]; resolve(); continue; }
-        try { const j = JSON.parse(data); if (j.id != null) responses.set(j.id, j); } catch {}
-      }
-    });
-  });
-});
-let nextId = 1;
-async function call(name, args) {
-  const id = nextId++;
-  const body = JSON.stringify({jsonrpc:"2.0",id,method:"tools/call",params:{name,arguments:args}});
-  await new Promise((res,rej) => {
-    const req = http.request(`http://localhost:${PORT}/message?session=${sid}`,{method:"POST",headers:{"Content-Type":"application/json","Content-Length":Buffer.byteLength(body)}},()=>res());
-    req.on("error",rej); req.write(body); req.end();
-  });
-  for (let i=0;i<60;i++) { if (responses.has(id)) return JSON.parse(responses.get(id).result.content[0].text); await new Promise(r => setTimeout(r, 100)); }
-  throw new Error("timeout: "+name);
-}
-
-// add new tests here as features grow
-console.log("register:", (await call("register",{name:"t",description:"t"})).ok ? "PASS" : "FAIL");
-console.log("broadcast bad arg:", (await call("broadcast",{message:"x"})).error ? "PASS" : "FAIL");
-console.log("broadcast empty:",   (await call("broadcast",{})).error ? "PASS" : "FAIL");
-console.log("broadcast good:",    (await call("broadcast",{content:"hi"})).ok ? "PASS" : "FAIL");
-console.log("server still up:",   (await fetch(`http://localhost:${PORT}/health`).then(r=>r.json())).status === "ok" ? "PASS" : "FAIL");
-process.exit(0);
-'
-
-lsof -ti:7402 | xargs kill 2>/dev/null
-```
-
-### Graceful shutdown test
-
-```bash
-CC_BRIDGE_PORT=7402 node bridge-server.mjs &
-SERVER_PID=$!
-sleep 1
-curl -sf -N --max-time 10 http://localhost:7402/sse > /tmp/sse-test.log 2>&1 &
-SSE_PID=$!
-sleep 1
-kill $SERVER_PID  # SIGTERM
-sleep 2
-grep "event: close" /tmp/sse-test.log && echo "PASS: close event sent" || echo "FAIL"
-```
+`--check` must be all green; tests must report 0 failures.
 
 ---
 
@@ -234,7 +219,8 @@ grep "event: close" /tmp/sse-test.log && echo "PASS: close event sent" || echo "
 3. **Validate every required arg** — `if (typeof args.X !== "string") return { error: "..." }`. The broadcast crash taught us this.
 4. Update the tool table in `USAGE.md` (Required args / Optional args / What it does)
 5. Update `skill/SKILL.md` if agents need new instructions for it
-6. Add a smoke test to the end-to-end script above
+6. Add assertions to `tests/test-tools.mjs` covering happy path + invalid input
+7. Add a line to `CHANGELOG.md` under `[Unreleased] → Added`
 
 ---
 
@@ -246,6 +232,8 @@ grep "event: close" /tmp/sse-test.log && echo "PASS: close event sent" || echo "
 4. The script MUST check `/tmp/cc-bridge-${SESSION_ID}.mcp` and exit silently if "no" — this is the anti-spam pattern
 5. Update the hook count in `check_hooks()` (currently expects 5)
 6. Update USAGE.md hook configuration reference
+7. Extend `tests/test-hook-mcp-check.sh` to cover the new hook's silence/run-clean contract
+8. Add a line to `CHANGELOG.md` under `[Unreleased] → Added`
 
 ---
 
@@ -256,6 +244,8 @@ grep "event: close" /tmp/sse-test.log && echo "PASS: close event sent" || echo "
 3. **Test idempotency** — run install twice, verify nothing duplicates.
 4. If you create a new file or directory, register it in the manifest (`manifest_add`).
 5. Update the "What install.sh modifies" table in USAGE.md.
+6. Add or extend `tests/test-process-mgmt.sh` if you change a flag's behaviour.
+7. Add a line to `CHANGELOG.md` under `[Unreleased]`.
 
 ---
 
@@ -292,7 +282,9 @@ These are not blockers. Each is a one-or-two-evening project. None are urgent �
 | `bridge-server.mjs` | High | Most logic lives here. ~600 lines, single file by design. |
 | `install.sh` | Medium | Every new file/dir/hook needs a line here. |
 | `USAGE.md` | Medium | Update with every user-facing change. |
+| `CHANGELOG.md` | Medium | Update WHILE you work, not after. One line per change under `[Unreleased]`. |
 | `DEVELOPER.md` | Medium | Update when you learn something. THAT'S THIS FILE. |
+| `tests/test-*.{mjs,sh}` | Medium | Add a test for every new feature. `run-all.sh` auto-discovers. |
 | `skill/SKILL.md` | Low | Only when the protocol changes. |
 | `hooks/*.sh` | Low | Stable. Only touch for MCP-availability logic or new events. |
 | `bridge-stdio.mjs` | Rare | Desktop adapter. Almost never changes. |
