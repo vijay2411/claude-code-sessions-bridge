@@ -363,9 +363,11 @@ async function executeTool(sseId, name, args) {
 
     case "broadcast": {
       if (!myName) return { error: "Call register() first." };
+      if (typeof args.content !== "string") return { error: "broadcast requires { content: string, append?: boolean }" };
       const cur = scratchpad.get(myName) || "";
-      scratchpad.set(myName, args.append ? cur + "\n" + args.content : args.content);
-      return { ok: true, session: myName, length: scratchpad.get(myName).length };
+      const next = args.append ? cur + "\n" + args.content : args.content;
+      scratchpad.set(myName, next);
+      return { ok: true, session: myName, length: next.length };
     }
 
     case "read_scratchpad": {
@@ -451,11 +453,15 @@ const server = http.createServer(async (req, res) => {
         if (isBlocking) {
           // For ask: return HTTP 202 immediately, send MCP response via SSE when ready
           res.writeHead(202); res.end();
-          const tr = await executeTool(sid, tn, ta ?? {});
+          let tr;
+          try { tr = await executeTool(sid, tn, ta ?? {}); }
+          catch (err) { tr = { error: `tool '${tn}' threw: ${err.message}` }; console.error(`[bridge] tool '${tn}' threw:`, err); }
           sendSSE(sid, { jsonrpc: "2.0", id: rpc.id, result: { content: [{ type: "text", text: JSON.stringify(tr, null, 2) }] } });
           return;
         }
-        const tr = await executeTool(sid, tn, ta ?? {});
+        let tr;
+        try { tr = await executeTool(sid, tn, ta ?? {}); }
+        catch (err) { tr = { error: `tool '${tn}' threw: ${err.message}` }; console.error(`[bridge] tool '${tn}' threw:`, err); }
         result = { content: [{ type: "text", text: JSON.stringify(tr, null, 2) }] };
         break;
       }
@@ -531,9 +537,12 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(404); res.end("not found");
 });
 
+process.on("uncaughtException", (err) => { console.error("[bridge] uncaught exception (kept running):", err); });
+process.on("unhandledRejection", (err) => { console.error("[bridge] unhandled rejection (kept running):", err); });
+
 server.listen(PORT, () => {
   console.log(`\n${"═".repeat(42)}`);
-  console.log(`  cc-bridge v2.0`);
+  console.log(`  cc-bridge v2.1`);
   console.log(`  SSE:     http://localhost:${PORT}/sse`);
   console.log(`  Health:  http://localhost:${PORT}/health`);
   console.log(`${"═".repeat(42)}\n`);
