@@ -67,7 +67,7 @@ Usage:
 Commands:
   install      Copy files to ${INSTALL_DIR} and configure hooks, MCP, skill, Desktop
   uninstall    Reverse all install steps (hooks, MCP, skill, Desktop)
-  start        Start the bridge server (PID at /tmp/cc-bridge.pid)
+  start        Start the bridge server (PID at /tmp/claude-bridge.pid)
   stop         Graceful stop (SIGTERM — sends SSE close event)
   restart      Stop then start
   check        Show status of every component
